@@ -1,4 +1,6 @@
-export const trainingPlanWorkouts = [
+import { Workout } from "@/types";
+
+export const trainingPlanWorkouts: Workout[] = [
   // FASE 1: BASE AERÓBICA Y ADAPTACIÓN ANATÓMICA (Mes 1 & 2)
   // MES 1
   // Semana 1
@@ -608,7 +610,7 @@ export const trainingPlanWorkouts = [
   {
     id: "2026-08-31",
     date: "2026-08-31",
-    title: "Movilidad y Core",
+    title: "Movilidad and Core",
     description: "Movilidad y core ligero.",
     type: "movilidad",
     phase: "FASE 1: BASE AERÓBICA Y ADAPTACIÓN ANATÓMICA",
@@ -927,7 +929,7 @@ export const trainingPlanWorkouts = [
     description: "Core y estiramientos activos. Guardando energía para el test.",
     type: "movilidad",
     phase: "FASE 2: DESARROLLO DE LA EFICIENCIA DE UMBRAL",
-    month: "MES 3: Tempo en Cuesta y Alargue de Series",
+    month: "MES 3: Tempo en Cuesta and Alargue de Series",
     week: 12,
     completed: false
   },

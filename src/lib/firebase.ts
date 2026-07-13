@@ -1,5 +1,5 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getFirestore, Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,14 +11,14 @@ const firebaseConfig = {
 };
 
 // Check if configuration is set and not using placeholder text
-const isConfigValid = !!(
+const isConfigValid: boolean = !!(
   firebaseConfig.projectId &&
   firebaseConfig.projectId !== "YOUR_PROJECT_ID" &&
   firebaseConfig.apiKey
 );
 
-let app;
-let db;
+let app: FirebaseApp | undefined;
+let db: Firestore | undefined;
 
 if (isConfigValid) {
   try {

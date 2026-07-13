@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { trainingPlanWorkouts } from "@/lib/seederData";
 import { db, isConfigValid } from "@/lib/firebase";
+import { Workout } from "@/types";
 import { 
   collection, 
   onSnapshot, 
@@ -10,11 +11,12 @@ import {
   updateDoc, 
   writeBatch,
   query,
-  orderBy
+  orderBy,
+  DocumentData
 } from "firebase/firestore";
 
 // Helper to parse YYYY-MM-DD date safely in local timezone
-const parseWorkoutDate = (dateStr) => {
+const parseWorkoutDate = (dateStr: string) => {
   const [year, month, day] = dateStr.split("-").map(Number);
   const date = new Date(year, month - 1, day);
   const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -28,15 +30,22 @@ const parseWorkoutDate = (dateStr) => {
   };
 };
 
+interface GroupedWeek {
+  week: number;
+  phase: string;
+  month: string;
+  items: Workout[];
+}
+
 export default function Home() {
-  const [workouts, setWorkouts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isDemoMode, setIsDemoMode] = useState(false);
-  const [activePhase, setActivePhase] = useState("TODAS"); // "TODAS", "FASE 1", "FASE 2", "FASE 3"
-  const [onlyPending, setOnlyPending] = useState(false);
-  const [selectedWeek, setSelectedWeek] = useState("TODAS");
-  const [seeding, setSeeding] = useState(false);
-  const [feedbackMsg, setFeedbackMsg] = useState("");
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
+  const [activePhase, setActivePhase] = useState<string>("TODAS"); // "TODAS", "FASE 1", "FASE 2", "FASE 3"
+  const [onlyPending, setOnlyPending] = useState<boolean>(false);
+  const [selectedWeek, setSelectedWeek] = useState<string>("TODAS");
+  const [seeding, setSeeding] = useState<boolean>(false);
+  const [feedbackMsg, setFeedbackMsg] = useState<string>("");
 
   // Target date for workout reference (Today is Sunday, July 12, 2026)
   const todayStr = "2026-07-12";
@@ -46,10 +55,10 @@ export default function Home() {
   }, []);
 
   // Use Firebase or local fallback
-  const useFirebase = isConfigValid && !isDemoMode;
+  const useFirebase = !!(isConfigValid && !isDemoMode && db);
 
   useEffect(() => {
-    if (!useFirebase) {
+    if (!useFirebase || !db) {
       // Local Storage Demo Mode
       const stored = localStorage.getItem("ultra_sam_workouts");
       if (stored) {
@@ -69,9 +78,9 @@ export default function Home() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const list = [];
-        snapshot.forEach((doc) => {
-          list.push({ id: doc.id, ...doc.data() });
+        const list: Workout[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push({ id: docSnap.id, ...docSnap.data() } as Workout);
         });
         setWorkouts(list);
         setLoading(false);
@@ -91,7 +100,7 @@ export default function Home() {
     setSeeding(true);
     setFeedbackMsg("Sembrando entrenamientos...");
 
-    if (!useFirebase) {
+    if (!useFirebase || !db) {
       // Reset local storage
       localStorage.setItem("ultra_sam_workouts", JSON.stringify(trainingPlanWorkouts));
       setWorkouts(trainingPlanWorkouts);
@@ -102,7 +111,7 @@ export default function Home() {
     }
 
     try {
-      // Firestore batch upload (split into chunks of 100 just in case, although limit is 500)
+      // Firestore batch upload
       const batch = writeBatch(db);
       trainingPlanWorkouts.forEach((workout) => {
         const workoutRef = doc(db, "workouts", workout.id);
@@ -112,7 +121,7 @@ export default function Home() {
       setFeedbackMsg("¡Sembrado con éxito en Cloud Firestore!");
     } catch (error) {
       console.error("Error seeding Firestore:", error);
-      setFeedbackMsg("Error al sembrar. Revisa las reglas de seguridad o credenciales.");
+      setFeedbackMsg("⚠️ Error al sembrar en Firestore. La base de datos es de Solo Lectura.");
     } finally {
       setSeeding(false);
       setTimeout(() => setFeedbackMsg(""), 4000);
@@ -120,10 +129,10 @@ export default function Home() {
   };
 
   // Toggle completion status
-  const handleToggleComplete = async (id, currentStatus) => {
+  const handleToggleComplete = async (id: string, currentStatus: boolean) => {
     const updatedStatus = !currentStatus;
 
-    if (!useFirebase) {
+    if (!useFirebase || !db) {
       // Update local state and localStorage
       const updated = workouts.map((w) => 
         w.id === id ? { ...w, completed: updatedStatus } : w
@@ -138,12 +147,12 @@ export default function Home() {
       await updateDoc(docRef, { completed: updatedStatus });
     } catch (error) {
       console.error("Error updating document:", error);
-      alert("No se pudo actualizar en Firestore. ¿Está configurada la base de datos?");
+      alert("⚠️ No se puede actualizar en Firestore: La base de datos está configurada como SOLO LECTURA. Los cambios no se guardarán en el servidor.");
     }
   };
 
   // Calculate most upcoming workout (closest to 2026-07-12 that is not completed)
-  const nextWorkout = useMemo(() => {
+  const nextWorkout = useMemo<Workout | null>(() => {
     if (workouts.length === 0) return null;
 
     // Filter out completed ones
@@ -193,8 +202,8 @@ export default function Home() {
   }, [workouts, activePhase, selectedWeek, onlyPending]);
 
   // Group filtered workouts by week for timeline layout
-  const groupedWorkouts = useMemo(() => {
-    const groups = {};
+  const groupedWorkouts = useMemo<GroupedWeek[]>(() => {
+    const groups: { [key: number]: GroupedWeek } = {};
     filteredWorkouts.forEach((w) => {
       if (!groups[w.week]) {
         groups[w.week] = {
@@ -226,40 +235,40 @@ export default function Home() {
   }, [workouts]);
 
   // List of weeks for the filter dropdown
-  const weeksList = useMemo(() => {
-    const weeks = new Set();
+  const weeksList = useMemo<number[]>(() => {
+    const weeks = new Set<number>();
     workouts.forEach((w) => weeks.add(w.week));
     return Array.from(weeks).sort((a, b) => a - b);
   }, [workouts]);
 
   // Helper to determine CSS variable for workout types
-  const getWorkoutColorStyles = (type) => {
+  const getWorkoutColorStyles = (type: string) => {
     switch (type) {
       case "running":
         return {
           "--item-color": "var(--color-running)",
           "--item-color-glow": "var(--color-running-glow)"
-        };
+        } as React.CSSProperties;
       case "fuerza":
         return {
           "--item-color": "var(--color-fuerza)",
           "--item-color-glow": "var(--color-fuerza-glow)"
-        };
+        } as React.CSSProperties;
       case "caminata":
         return {
           "--item-color": "var(--color-caminata)",
           "--item-color-glow": "var(--color-caminata-glow)"
-        };
+        } as React.CSSProperties;
       case "movilidad":
         return {
           "--item-color": "var(--color-movilidad)",
           "--item-color-glow": "var(--color-movilidad-glow)"
-        };
+        } as React.CSSProperties;
       default:
         return {
           "--item-color": "var(--color-descanso)",
           "--item-color-glow": "var(--color-descanso-glow)"
-        };
+        } as React.CSSProperties;
     }
   };
 
@@ -278,7 +287,7 @@ export default function Home() {
             <div>
               <strong>Crear Proyecto de Firebase:</strong>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-                Ve a la <a href="https://console.firebase.google.com/" target="_blank" style={{ color: "#38bdf8", textDecoration: "underline" }}>Consola de Firebase</a>, crea un proyecto y activa Cloud Firestore en modo de prueba.
+                Ve a la <a href="https://console.firebase.google.com/" target="_blank" style={{ color: "#38bdf8", textDecoration: "underline" }}>Consola de Firebase</a>, crea un proyecto y activa Cloud Firestore.
               </p>
             </div>
           </div>
@@ -305,7 +314,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=tu_app_id`}
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "2rem" }}>
           <button 
             className="btn btn-primary" 
-            style={{ width: "100%", "--accent-color": "#38bdf8", "--glow-color": "rgba(56, 189, 248, 0.2)" }}
+            style={{ width: "100%", "--accent-color": "#38bdf8", "--glow-color": "rgba(56, 189, 248, 0.2)" } as React.CSSProperties}
             onClick={() => window.location.reload()}
           >
             Refrescar y Verificar Configuración
@@ -333,9 +342,13 @@ NEXT_PUBLIC_FIREBASE_APP_ID=tu_app_id`}
           <p>
             Entrenamiento estratégico de 6 meses para ruta con altimetría severa.
           </p>
-          {isDemoMode && (
+          {isDemoMode ? (
             <div style={{ display: "inline-block", background: "rgba(234, 179, 8, 0.15)", border: "1px solid rgba(234, 179, 8, 0.3)", padding: "0.25rem 0.75rem", borderRadius: "8px", fontSize: "0.8rem", color: "#fbbf24", marginTop: "0.5rem" }}>
-              ⚠️ Ejecutando en <strong>Modo Demo Local</strong>. Los datos se guardan en este navegador.
+              ⚠️ Ejecutando en <strong>Modo Demo Local</strong>. Los cambios se guardan en este navegador.
+            </div>
+          ) : (
+            <div style={{ display: "inline-block", background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", padding: "0.25rem 0.75rem", borderRadius: "8px", fontSize: "0.8rem", color: "#38bdf8", marginTop: "0.5rem" }}>
+              🔒 Base de Datos conectada: **Firestore (Solo Lectura)**.
             </div>
           )}
         </div>
@@ -459,7 +472,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=tu_app_id`}
             >
               <option value="TODAS">Ver Todas</option>
               {weeksList.map((week) => (
-                <option key={week} value={week}>Semana {week}</option>
+                <option key={week} value={String(week)}>Semana {week}</option>
               ))}
             </select>
 
@@ -522,7 +535,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=tu_app_id`}
                             <span className="workout-item-title">{workout.title}</span>
                             <span className="type-badge">{workout.type === "running" ? "Running" : workout.type === "fuerza" ? "Fuerza" : workout.type === "caminata" ? "Caminata" : workout.type === "movilidad" ? "Movilidad" : "Descanso"}</span>
                             {isUpcoming && (
-                              <span style={{ fontSize: "0.7rem", color: "var(--item-color)", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.05em", background: "rgba(255,255,255,0.05)", padding: "0.15rem 0.4rem", borderRadius: "4px", border: "1px solid" }}>
+                              <span style={{ fontSize: "0.7rem", color: "var(--item-color)", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.05em", background: "rgba(255,255,255,0.05)", padding: "0.15rem 0.4rem", borderRadius: "4px", border: "1px solid" } as React.CSSProperties}>
                                 Próximo
                               </span>
                             )}
@@ -555,7 +568,11 @@ NEXT_PUBLIC_FIREBASE_APP_ID=tu_app_id`}
       <footer className="glass-card admin-section">
         <h3>Panel de Control de Datos</h3>
         <p>
-          Si no ves los entrenamientos o deseas reiniciar el plan a su estado original (todos los días sin completar), utiliza el botón de abajo.
+          {useFirebase ? (
+            "⚠️ La base de datos de Firestore está configurada como SOLO LECTURA. Para poder sembrar o guardar cambios permanentemente, debes usar el Modo Demo Local."
+          ) : (
+            "Puedes reiniciar el plan a su estado original (todos los días sin completar) en el almacenamiento local de tu navegador."
+          )}
         </p>
         <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", justifyContent: "center" }}>
           <button 
@@ -566,6 +583,15 @@ NEXT_PUBLIC_FIREBASE_APP_ID=tu_app_id`}
           >
             {seeding ? "Procesando..." : "Sembrar / Reiniciar Plan de 6 Meses"}
           </button>
+
+          {isConfigValid && (
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => setIsDemoMode(!isDemoMode)}
+            >
+              {isDemoMode ? "🔌 Cambiar a Firestore (Solo Lectura)" : "🔌 Cambiar a Modo Demo (Escritura Local)"}
+            </button>
+          )}
         </div>
         {feedbackMsg && (
           <div style={{ fontSize: "0.9rem", color: "#38bdf8", fontWeight: "600", transition: "all 0.3s" }}>

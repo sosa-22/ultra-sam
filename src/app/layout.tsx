@@ -16,7 +16,11 @@ export const metadata = {
   description: "Plan de entrenamiento de 6 meses adaptado a altimetría específica",
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>{children}</body>
