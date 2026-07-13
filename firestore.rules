@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /workouts/{workoutId} {
+      // For this landing page application, we allow read and write operations.
+      // In a production app, writes should be restricted to authenticated administrators.
+      allow read, write: if true;
+    }
+  }
+}

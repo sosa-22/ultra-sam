@@ -1,0 +1,655 @@
+:root {
+  --bg-primary: #0a0d14;
+  --bg-secondary: #121824;
+  --bg-accent: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  /* Color Coding for Workout Types */
+  --color-running: #ff5722;
+  --color-running-glow: rgba(255, 87, 34, 0.2);
+  --color-fuerza: #9c27b0;
+  --color-fuerza-glow: rgba(156, 39, 176, 0.2);
+  --color-caminata: #00bcd4;
+  --color-caminata-glow: rgba(0, 188, 212, 0.2);
+  --color-movilidad: #4caf50;
+  --color-movilidad-glow: rgba(76, 175, 80, 0.2);
+  --color-descanso: #607d8b;
+  --color-descanso-glow: rgba(96, 125, 139, 0.2);
+  
+  --card-bg: rgba(22, 30, 49, 0.6);
+  --card-border: rgba(255, 255, 255, 0.07);
+  --card-glow: rgba(56, 189, 248, 0.05);
+  
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(30, 41, 59, 0.3) 0, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(15, 23, 42, 0.5) 0, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(2, 6, 23, 0.8) 0, transparent 100%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glassmorphism utility card */
+.glass-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4), 0 0 20px 0 var(--card-glow);
+}
+
+/* Base Layout Container */
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+/* Header & Profile section */
+.header-section {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .header-section {
+    grid-template-columns: 3fr 2fr;
+    align-items: center;
+  }
+}
+
+.title-container h1 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  background: linear-gradient(to right, #38bdf8, #818cf8, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
+}
+
+.title-container p {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+/* Athlete Profile Card */
+.profile-card {
+  padding: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.profile-card h3 {
+  font-size: 1rem;
+  color: #38bdf8;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.profile-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-item .label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.profile-item .value {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Upcoming Workout Widget (STICKY AT TOP) */
+.featured-workout-container {
+  position: relative;
+}
+
+.featured-workout-card {
+  padding: 2rem;
+  border-left: 6px solid var(--accent-color, var(--color-running));
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 30px var(--glow-color, var(--color-running-glow));
+}
+
+.featured-workout-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, var(--glow-color, var(--color-running-glow)) 0%, transparent 70%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.featured-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--accent-color, var(--color-running));
+  color: white;
+  margin-bottom: 1rem;
+  box-shadow: 0 0 10px var(--accent-color, var(--color-running));
+}
+
+.featured-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.featured-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.featured-meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.featured-desc {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+  background: rgba(15, 23, 42, 0.4);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.featured-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+/* Beautiful Action Button */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn-primary {
+  background: var(--accent-color, var(--color-running));
+  color: white;
+  box-shadow: 0 4px 14px var(--glow-color, var(--color-running-glow));
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--glow-color, var(--color-running-glow));
+  filter: brightness(1.1);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+/* Filter Controls bar */
+.controls-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .controls-bar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.filters-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.filter-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.filter-btn.active {
+  background: #38bdf8;
+  color: #0f172a;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+.selector-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.select-dropdown {
+  background: var(--bg-secondary);
+  border: 1px solid var(--card-border);
+  color: var(--text-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  outline: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Dashboard Columns Layout */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+/* Workouts List styling */
+.workouts-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.week-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.week-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 0.5rem;
+  margin-top: 1rem;
+}
+
+.week-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.week-phase {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* Individual Workout Card */
+.workout-item {
+  padding: 1.25rem;
+  border-left: 4px solid var(--item-color, var(--color-running));
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  align-items: start;
+  position: relative;
+  background: rgba(22, 30, 49, 0.4);
+}
+
+@media (min-width: 640px) {
+  .workout-item {
+    grid-template-columns: auto 1fr auto;
+    gap: 1.5rem;
+    align-items: center;
+  }
+}
+
+.workout-item.completed-card {
+  opacity: 0.6;
+  border-left-color: var(--text-muted);
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.workout-date-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+  width: 70px;
+  height: 70px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  text-align: center;
+}
+
+.workout-date-badge .day-num {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.workout-date-badge .day-month {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.workout-date-badge .day-name {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.workout-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.workout-details-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.workout-item-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.workout-item.completed-card .workout-item-title {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+.type-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--item-color-glow);
+  color: var(--item-color);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.workout-desc {
+  font-size: 0.925rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.workout-item.completed-card .workout-desc {
+  color: var(--text-muted);
+}
+
+/* Beautiful Interactive Checkbox */
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 0.5rem;
+}
+
+.round-checkbox {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.round-checkbox input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 28px;
+  width: 28px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--item-color, var(--color-running));
+  border-radius: 50%;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.round-checkbox:hover input ~ .checkmark {
+  background-color: var(--item-color-glow);
+  transform: scale(1.1);
+}
+
+.round-checkbox input:checked ~ .checkmark {
+  background-color: var(--item-color, var(--color-running));
+  border-color: var(--item-color, var(--color-running));
+}
+
+.round-checkbox input:checked ~ .checkmark::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 5px;
+  width: 6px;
+  height: 11px;
+  border: solid white;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+
+/* Completed styles for general checkbox (grey out) */
+.workout-item.completed-card .checkmark {
+  border-color: var(--text-muted);
+}
+.workout-item.completed-card .round-checkbox input:checked ~ .checkmark {
+  background-color: var(--text-muted);
+  border-color: var(--text-muted);
+}
+
+/* Setup Helper CSS (No Config State) */
+.setup-container {
+  max-width: 600px;
+  margin: 4rem auto;
+  padding: 2.5rem;
+}
+
+.setup-container h2 {
+  font-size: 1.75rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(to right, #ff4e50, #f9d423);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.setup-steps {
+  margin: 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.setup-step {
+  display: flex;
+  gap: 1rem;
+}
+
+.step-number {
+  background: var(--bg-accent);
+  color: #38bdf8;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.code-block {
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  margin-top: 0.5rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: auto;
+}
+
+/* Seeder / Control section (admin panel at the bottom) */
+.admin-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+  text-align: center;
+  border-radius: 12px;
+}
+
+.admin-section p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Empty list placeholder styling */
+.empty-placeholder {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-secondary);
+}
+
+.empty-placeholder h3 {
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+/* Custom transitions and loader */
+.fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.loader {
+  border: 3px solid rgba(255, 255, 255, 0.05);
+  border-top: 3px solid #38bdf8;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 4rem auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
