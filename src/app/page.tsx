@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { trainingPlanWorkouts } from "@/lib/seederData";
 import { db, isConfigValid } from "@/lib/firebase";
 import { Workout } from "@/types";
@@ -12,7 +13,10 @@ import {
   writeBatch,
   query,
   orderBy,
-  DocumentData
+  DocumentData,
+  where,
+  limit,
+  getCountFromServer
 } from "firebase/firestore";
 
 // Helper to parse YYYY-MM-DD date safely in local timezone
@@ -47,6 +51,11 @@ export default function Home() {
   const [seeding, setSeeding] = useState<boolean>(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string>("");
 
+  // Firestore counter stats
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [completedCount, setCompletedCount] = useState<number>(0);
+  const [runningCountState, setRunningCountState] = useState<number>(0);
+
   // Target date for workout reference (Today is Sunday, July 12, 2026)
   const todayStr = "2026-07-12";
   const todayDate = useMemo(() => {
@@ -57,24 +66,42 @@ export default function Home() {
   // Use Firebase or local fallback
   const useFirebase = !!(isConfigValid && !isDemoMode && db);
 
+  // Load workouts
   useEffect(() => {
     if (!useFirebase || !db) {
       // Local Storage Demo Mode
       const stored = localStorage.getItem("ultra_sam_workouts");
+      let allWorkouts: Workout[] = [];
       if (stored) {
-        setWorkouts(JSON.parse(stored));
+        allWorkouts = JSON.parse(stored);
       } else {
-        // Initial load with default seeder data
-        setWorkouts(trainingPlanWorkouts);
+        allWorkouts = trainingPlanWorkouts;
         localStorage.setItem("ultra_sam_workouts", JSON.stringify(trainingPlanWorkouts));
       }
+      
+      // Filter 10 closest upcoming workouts
+      const upcoming = allWorkouts.filter((w) => w.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date));
+      let sliced = upcoming.slice(0, 10);
+      // Pad with past workouts if we have fewer than 10 upcoming workouts
+      if (sliced.length < 10) {
+        const past = allWorkouts.filter((w) => w.date < todayStr).sort((a, b) => b.date.localeCompare(a.date));
+        const needed = 10 - sliced.length;
+        const pastToAdd = past.slice(0, needed).reverse();
+        sliced = [...pastToAdd, ...sliced];
+      }
+      setWorkouts(sliced);
       setLoading(false);
       return;
     }
 
-    // Firestore Real-time listener
+    // Firestore Real-time listener: 10 closest upcoming workouts
     setLoading(true);
-    const q = query(collection(db, "workouts"), orderBy("date", "asc"));
+    const q = query(
+      collection(db, "workouts"),
+      where("date", ">=", todayStr),
+      orderBy("date", "asc"),
+      limit(10)
+    );
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -218,21 +245,59 @@ export default function Home() {
     return Object.values(groups).sort((a, b) => a.week - b.week);
   }, [filteredWorkouts]);
 
+  // Fetch overall progress counts from Firestore (to avoid loading all 168 docs)
+  useEffect(() => {
+    if (!db || !useFirebase) return;
+
+    const fetchCounts = async () => {
+      try {
+        const coll = collection(db, "workouts");
+        const totalSnap = await getCountFromServer(coll);
+        const completedSnap = await getCountFromServer(query(coll, where("completed", "==", true)));
+        const runningSnap = await getCountFromServer(
+          query(coll, where("type", "==", "running"), where("completed", "==", true))
+        );
+        
+        setTotalCount(totalSnap.data().count);
+        setCompletedCount(completedSnap.data().count);
+        setRunningCountState(runningSnap.data().count);
+      } catch (err) {
+        console.error("Error fetching stats counts:", err);
+      }
+    };
+
+    fetchCounts();
+  }, [workouts, useFirebase]); // Refetch counts when the local list snapshot updates
+
   // Progress metrics calculation
   const stats = useMemo(() => {
-    const total = workouts.length;
-    if (total === 0) return { total: 0, completed: 0, percent: 0, runningCount: 0 };
-    const completed = workouts.filter((w) => w.completed).length;
-    const percent = Math.round((completed / total) * 100);
-    const runningCount = workouts.filter((w) => w.type === "running" && w.completed).length;
-    
+    if (!useFirebase) {
+      // In local demo mode, we need to read from the FULL local storage list to show correct overall progress
+      const stored = localStorage.getItem("ultra_sam_workouts");
+      const allWorkouts: Workout[] = stored ? JSON.parse(stored) : trainingPlanWorkouts;
+      const total = allWorkouts.length;
+      if (total === 0) return { total: 0, completed: 0, percent: 0, runningCount: 0 };
+      const completed = allWorkouts.filter((w) => w.completed).length;
+      const percent = Math.round((completed / total) * 100);
+      const running = allWorkouts.filter((w) => w.type === "running" && w.completed).length;
+      
+      return {
+        total,
+        completed,
+        percent,
+        runningCount: running
+      };
+    }
+
+    // In Firestore mode, use our aggregated count states
+    const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
     return {
-      total,
-      completed,
+      total: totalCount,
+      completed: completedCount,
       percent,
-      runningCount
+      runningCount: runningCountState
     };
-  }, [workouts]);
+  }, [workouts, useFirebase, totalCount, completedCount, runningCountState]);
 
   // List of weeks for the filter dropdown
   const weeksList = useMemo<number[]>(() => {
@@ -342,6 +407,11 @@ NEXT_PUBLIC_FIREBASE_APP_ID=tu_app_id`}
           <p>
             Entrenamiento estratégico de 6 meses para ruta con altimetría severa.
           </p>
+          <div style={{ marginTop: "0.75rem", display: "flex", gap: "1rem" }}>
+            <Link href="/workouts" className="filter-btn active" style={{ display: "inline-flex", textDecoration: "none", alignItems: "center", gap: "0.5rem" }}>
+              📋 Historial Completo (Ver Todos)
+            </Link>
+          </div>
           {isDemoMode ? (
             <div style={{ display: "inline-block", background: "rgba(234, 179, 8, 0.15)", border: "1px solid rgba(234, 179, 8, 0.3)", padding: "0.25rem 0.75rem", borderRadius: "8px", fontSize: "0.8rem", color: "#fbbf24", marginTop: "0.5rem" }}>
               ⚠️ Ejecutando en <strong>Modo Demo Local</strong>. Los cambios se guardan en este navegador.
@@ -445,6 +515,10 @@ NEXT_PUBLIC_FIREBASE_APP_ID=tu_app_id`}
 
       {/* Main timeline listing and filters */}
       <section style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h2 style={{ fontSize: "1.5rem", fontWeight: "700" }}>Próximos 10 Entrenamientos</h2>
+          <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Fecha actual: {todayStr}</span>
+        </div>
         <div className="controls-bar">
           <div className="filters-group">
             {["TODAS", "FASE 1", "FASE 2", "FASE 3"].map((phase) => (

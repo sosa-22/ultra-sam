@@ -2,10 +2,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /workouts/{workoutId} {
-      // Allow public read access to the training plan
+      // Cualquiera puede leer los entrenamientos del plan
       allow read: if true;
-      // Deny client-side writes to prevent unauthorized modifications to your data
-      allow write: if false;
+      
+      // Permitir actualizaciones ÚNICAMENTE si el único campo que cambia es 'completed'
+      // Esto protege el título, fecha, tipo de ejercicio y descripción contra modificaciones
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['completed']);
+      
+      // Bloquear creación y eliminación desde clientes públicos
+      allow create, delete: if false;
     }
   }
 }
